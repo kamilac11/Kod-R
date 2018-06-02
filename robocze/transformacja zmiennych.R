@@ -1,3 +1,17 @@
+library(readxl)
+zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_sie_obiektow.xlsx", 
+                           sheet = "Arkusz1", col_types = c("numeric","text", 
+                                                            "text", "text", "text", "text", "blank", 
+                                                            "numeric", "numeric", "numeric", 
+                                                            "numeric", "numeric", "text", "numeric", 
+                                                            "text", "text", "text", "text", "text", 
+                                                            "text", "numeric", "text", "text", 
+                                                            "text", "numeric", "numeric", "numeric", 
+                                                            "numeric", "numeric", "numeric"))
+library(dplyr)
+test<-select(zbior_danych, c("Nr","CENA.BRUTTO_[pln]","MOC_[km]","POJEMNOSC.SKOKOWA_[cm3]",
+                          "ROK.PRODUKCJI", "PRZEBIEG_[km]" ))
+
 #Stymmulacja zmiennych - funkcje
 ##w miejsce x wpisz nazwe na zbiorze na ktorym pracujesz, a w miejsce y - nazwie kolumny
 ###UWAGA: dane stymuluj po kolei, po kazdej stymulacji nadpisuj zbior, aby zmiany zostaly zachowane
@@ -42,23 +56,66 @@ for (j in 2:ncol(x)){
     x[i,j]=(x[i,j]-minim[j])/(maksi[j]-minim[j])
   }
 }
+return(x)
 }
 
-mean(as.vector(dane2[7])) #bo dane2[4] traktuje jako lista a mean dziala na wektorach, to max dziala na listach- nie jest glupie bo to sortowanie plus minut
-max(dane2[7])
-#klopot z mean why??? 
+
+#mean(as.vector(dane2[7])) #bo dane2[4] traktuje jako lista a mean dziala na wektorach, to max dziala na listach- nie jest glupie bo to sortowanie plus minut
+
 ##przekszta³cenie ilorazowe, przy odniesieniu do wartoœci oczekiwanej (gdzie jest to wartoœæ œrednia dla zbiorów skoñczonych)
-przeksztalcenie_roznicowe<-function(x){
-  srednia=0
-  for (j in 2:ncol(x)){
-    srednia[j]=mean(x[j])
-   
-    for (i in 1:nrow(x)){
-      x[i,j]=(x[i,j]-minim[j])/(maksi[j]-minim[j])
-    }
-  }
+przeksztalcenie_ilorazowe<-function(x){
+    suma=0
+    srednia=0
+    for (j in 2:ncol(x)){
+      suma[j]=sum(x[j])
+      srednia[j]=suma[j]/nrow(x)
+      
+    for(i in 1:nrow(x)){
+      x[i,j]=x[i,j]/srednia[j]
+      }
+    } 
+  return(x)
 }
 
+b=przeksztalcenie_ilorazowe(test)
+
+
+##spr czy srednia dziala srednia: 
+#a<-function(x){
+ # suma=0
+  #srednia=0
+  #for (j in 2:ncol(x)){
+  #suma[j]=sum(x[j])
+  #srednia[j]=suma[j]/nrow(x)
+  #}
+  #return(srednia)
+  #}
+
+##standaryzacja - potrzeba dla zmiennej sredniej i odchylenia
+standaryzacja<-function(x){
+  suma=0
+  srednia=0
+  suma_kwadratow=0
+  kwadrat=0
+  odchylenie=0
+  for (j in 2:ncol(x)){
+    suma[j]=sum(x[j])
+    srednia[j]=suma[j]/nrow(x)
+    
+    for(i in 1:nrow(x)){
+      kwadrat[i]=(x[i,j]-srednia[j])^2
+      suma_kwadratow[j]=suma_kwadratow[j]+kwadrat[i]
+
+    }
+    odchylenie[j]=sqrt(suma_kwadratow[j]/nrow(x))
+  for(k in 1:nrow(x)){
+    x[i,j]=(x[i,j]-srednia[j])/odchylenie[j]
+  }
+    } 
+  return(x)
+}
+#cos nie dziala przemyslec
+uu<-standaryzacja(test)
 
 
 

@@ -95,8 +95,6 @@ b=przeksztalcenie_ilorazowe(test)
 standaryzacja<-function(x){
   suma=0
   srednia=0
-  suma_kwadratow=0
-  kwadrat=0
   odchylenie=0
   for (j in 2:ncol(x)){
     suma[j]=sum(x[j])

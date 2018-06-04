@@ -95,11 +95,17 @@ b=przeksztalcenie_ilorazowe(test)
 standaryzacja<-function(x){
   suma=0
   srednia=0
+<<<<<<< HEAD
+=======
+  suma_kwadratow=0
+  kwadrat=0
+>>>>>>> 369aba3ae20b5c9f0a3d45251d0026b11024e064
   odchylenie=0
   for (j in 2:ncol(x)){
     suma[j]=sum(x[j])
     srednia[j]=suma[j]/nrow(x)
     
+<<<<<<< HEAD
     suma_kwadratow=0
     kwadrat=0
     for(i in 1:nrow(x)){
@@ -111,11 +117,25 @@ standaryzacja<-function(x){
     
     for (i in 1:nrow(x)){
       x[i,j]=(x[i,j]-srednia[j])/odchylenie[j]
+=======
+    for(i in 1:nrow(x)){
+      kwadrat[i]=(x[i,j]-srednia[j])^2
+      suma_kwadratow[j]=suma_kwadratow[j]+kwadrat[i]
+
+>>>>>>> 369aba3ae20b5c9f0a3d45251d0026b11024e064
     }
+    odchylenie[j]=sqrt(suma_kwadratow[j]/nrow(x))
+  for(k in 1:nrow(x)){
+    x[i,j]=(x[i,j]-srednia[j])/odchylenie[j]
   }
+<<<<<<< HEAD
+=======
+    } 
+>>>>>>> 369aba3ae20b5c9f0a3d45251d0026b11024e064
   return(x)
 }
-
+#cos nie dziala przemyslec
+uu<-standaryzacja(test)
 
 
 

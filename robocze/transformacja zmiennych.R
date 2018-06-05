@@ -13,27 +13,28 @@ test<-select(zbior_danych, c("Nr","CENA.BRUTTO_[pln]","MOC_[km]","POJEMNOSC.SKOK
                           "ROK.PRODUKCJI", "PRZEBIEG_[km]" ))
 
 #Stymmulacja zmiennych - funkcje
-##w miejsce x wpisz nazwe na zbiorze na ktorym pracujesz, a w miejsce y - nazwie kolumny
+##w miejsce x wpisz nazwe na zbiorze na ktorym pracujesz, a w miejsce y - nazwie kolumny w ""
 ###UWAGA: dane stymuluj po kolei, po kazdej stymulacji nadpisuj zbior, aby zmiany zostaly zachowane
 
 #dla destymulant
 
 stymulacja_przeksztalcenie_ilorazowe<-function(x,y){
   for (i in 1:nrow(x)){
-    x[i,which(colnames(x)=="y")]=1/x[i,which(colnames(x)=="y")]
+    x[i,which(colnames(x)==y)]=1/x[i,which(colnames(x)==y)]
   }
   return(x)
 }
 
-
+max(test[which(colnames(test)=="PRZEBIEG_[km]")])
 
 stymulacja_przeksztalcenie_roznicowe<-function(x,y){
-  max_wartosc=max(x$'y')
+  max_wartosc=max(x[which(colnames(x)==y)])
   for (i in 1:nrow(x)){
-    x[i,which(colnames(x)=="y")]=max_wartosc-x[i,which(colnames(x)=="y")]
+    x[i,which(colnames(x)==y)]=max_wartosc-x[i,which(colnames(x)==y)]
   }
   return(x)
 }
+
 
 
 #Po dokonaniu stymulacji, nadpisz zbior na ktorym pracujesz, na zbior po stymulacji
@@ -115,7 +116,7 @@ standaryzacja<-function(x){
   }
   return(x)
 }
-#cos nie dziala przemyslec
+#dziala
 uu<-standaryzacja(test)
 
 

@@ -28,14 +28,14 @@ for (i in 1:nrow(dane_Hellwig)){
   dane_Hellwig[i,which(colnames(dane_Hellwig)=="PRZEBIEG_[km]")]=1/dane_Hellwig[i,which(colnames(dane_Hellwig)=="PRZEBIEG_[km]")]
 }
 #mo¿na od razu skorzystac z funkcji przeksztalcenie ilorazowe: 
-# miejsze y, wpisz nazwe kolumny"
+# miejsze y, wpisz nazwe kolumny w ""
 stymulacja_przeksztalcenie_ilorazowe<-function(x,y){
   for (i in 1:nrow(x)){
-    x[i,which(colnames(x)=="y")]=1/x[i,which(colnames(x)=="y")]
+    x[i,which(colnames(x)==y)]=1/x[i,which(colnames(x)==y)]
   }
   return(x)
 }
-dane_Hellwig<-stymulacja_przeksztalcenie_ilorazowe(dane_Hellwig,PRZEBIEG_[km])
+dane_Hellwig<-stymulacja_przeksztalcenie_ilorazowe(dane_Hellwig,"PRZEBIEG_[km]")
 
 
 

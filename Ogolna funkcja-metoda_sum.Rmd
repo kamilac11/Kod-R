@@ -1,0 +1,130 @@
+---
+title: "Funkcja dokonuj¹ca porz¹dkowania za pomoc¹ metody sum"
+#author: "Kamila Choja"
+#date: "22 maja 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+#Wstêp
+
+Na pocz¹tku u¿ytkownik przed skorzystaniem z funkcji musi zaimportowaæ dane, które chce poddaæ porz¹dkowaniu. W tym celu mo¿e u¿yæ np. takiego wywo³ania z podaniem swojej œcie¿ki pliku formatu xlsx, który chce poddaæ porz¹dkowaniu.
+Jako przyk³ad zaimportowa³am tabele zawieraj¹c¹ 8 obiektów, bêd¹cych ofertami sprzeda¿y aut. 
+
+```{r}
+library(readxl)
+zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_sie_obiektow.xlsx", 
+                           sheet = "Arkusz1", col_types = c("numeric","text", 
+                           "text", "text", "text", "text",                                                                              "blank","numeric", "numeric", "numeric", 
+                              "numeric", "numeric", "text",  "numeric", 
+                              "text", "text", "text", "text","text", 
+                                  "text", "numeric", "text", "text", 
+                                   "text", "numeric", "numeric",                                                                              "numeric", 
+                                   "numeric", "numeric", "numeric"))
+
+```
+Podgl¹d danych:
+```{r}
+head(zbior_danych)
+```
+##Podzbiór danych
+
+W kolejnym, kroku po przyjrzeniu siê zbiorowi danych, u¿ytkownik musi zadecydowaæ na których danych iloœciowych chce pracowaæ - wa¿na jest znajomoœæ danych. Dodatkowo pierwsz¹ kolumn¹ musi byæ kolumna zawieraj¹ca numery indeksów obiektów, ze wzglêdu na to, ¿e w wyniku zastosowania funkcji odpowiedzialnej za porz¹dkowanie, zostan¹ zwrócone w kolejnoœci malej¹cej numery indeksów, mówi¹ce o kolejnoœci uporz¹dkowania. W zwi¹zku z tym, za pomoc¹ poni¿szej procedury u¿ytkownik tworzy podzbiór zaimportowanego zbioru, gdzie w miejsce "" wpisuje nazwy kolumn zawieraj¹cych zmienne iloœciowe, wybrane do porz¹dkowania(przyjmijmy za³o¿enie, ¿e podzbiór bêdzie nazywa³ siê dane_porzadkowanie - bêdzie to pomocne w dalszej czêœci programu).
+U mnie wybranymi kolumnami s¹: cena, moc, pojemnoœæ, rok produkcji, przebieg. 
+```{r}
+dane_porzadkowanie<-zbior_danych[c("Nr","CENA.BRUTTO_[pln]","MOC_[km]",
+                                   "POJEMNOSC.SKOKOWA_[cm3]",
+                                   "ROK.PRODUKCJI","PRZEBIEG_[km]")]
+
+```
+##Transformacje danych
+
+Chc¹c zastosowaæ metodê sum do uporz¹dkowania zbioru, wymaganym jest aby zmienne mia³y charakter stymulant oraz by zosta³y poddane transformacji normalizacyjnej. Aby funckja dokonuj¹ca porz¹dkowania dawa³a poprawny wynik, u¿utkownik musi zaj¹æ siê tranformacj¹ przed jej zastosowaniem. Poni¿ej poda³am tego przyk³ad.
+Dla zmiennych które stymulantami nie s¹, nale¿y dokonaæ stymulacji. Wsród moich zmiennych poddanych porz¹dkowaniu, do stymulant nie nale¿y zmienna zmienna: przebieg - jest destymulant¹, w zwi¹zku z tym, zosta³a przekszta³cona na stymulante, za pomoc¹ przekszta³cenia ró¿nicowego podanego w postaci funkcji:
+
+```{r}
+stymulacja_przeksztalcenie_roznicowe<-function(x,y){
+  max_wartosc=max(x[which(colnames(x)==y)])
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=max_wartosc-x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+```
+
+Gdy u¿ytkownik chce skorzystaæ z tej funkcji, w miejsce x musi wpisaæ nazwê zbioru, a w miejsce y nazwê kolumny w "", któr¹ chce poddaæ stymulacji.
+
+UWAGA - kolumny wymagaj¹ce stymulacji, musz¹ zostaæ osobno poddane dzia³aniu poni¿szej funkcji, dodatkowo po ka¿dym zastosowaniu funkcji, nale¿y nadpisaæ zbiór by zmianny zosta³y zapisane.
+
+```{r}
+dane_porzadkowanie<-stymulacja_przeksztalcenie_roznicowe(dane_porzadkowanie,"PRZEBIEG_[km]")
+```
+
+W celu uzyskania porównywalnoœci miêdzy zmiennymi, zosta³y one poddane unitaryzacji, czyli od wartoœci zmiennej dla danego obiektu, odejmujemy minimalna wartoœæ danej cechy, a nastêpie ró¿nica ta jest dzielona przez ró¿nicê miêdzy maksymaln¹ i minimaln¹ wartoœæ danej cechy.  Poni¿ej zosta³a zaprezentowana funkcja dokonuj¹ca unitaryzacji.
+
+```{r} 
+unitaryzacja<-function(x){
+  maksi=0
+  minim=0
+  for (j in 2:ncol(x)){
+    maksi[j]=max(x[j])
+    minim[j]=min(x[j])
+  for (i in 1:nrow(x)){
+    x[i,j]=(x[i,j]-minim[j])/(maksi[j]-minim[j])
+  }
+}
+return(x)
+}
+```
+
+##Funkcja porz¹dkuj¹ca metod¹ sum
+
+W celu dokonania porz¹dkowania na unormowanych danych, nale¿y zastosowaæ poni¿sz¹ funkcjê tj. funkcja_porzadkowanie_metoda_sum, zwraca ona numery indeksów obiektów wg kolejnoœci, która uzyska³y one po uporz¹dkowaniu. Funkcja ta jest postaci:
+
+```{r}
+funkcja_porzadkowanie_metoda_sum<-function(x){
+  x<-unitaryzacja(x) #unitaryzacja stymulant
+  
+#sztywne zalozenie___ostania kolumna to zmienna_syntetyczna -za pomoca metody 
+#sredniej arytmetycznej
+    x[,"zmienna_syntetyczna"] <-0
+      for(i in 1:nrow(x)){
+        for(j in 2:(ncol(x)-1)){
+          x[i,ncol(x)]=x[i,ncol(x)]+x[i,j]
+            j=j+1
+            }
+    x[i,ncol(x)]=x[i,ncol(x)]/(ncol(x)-2) 
+#-2 bo interesuje nas ilosc zmiennych, poza nr indeksu i kolumna zmienna syntetetyczna
+      }
+    
+#wyeliminowanie ujemnych wartosci zmiennej syntetycznej
+    min_zmienna=min(x$zmienna_syntetyczna)
+    for(i in 1:nrow(x)){
+      x[i,ncol(x)]=x[i,ncol(x)]-min_zmienna
+    }
+#ostatnie przeksztalcenie normalizacja zm. syntetycznej
+    max_zmienna=max(x$zmienna_syntetyczna)
+    for(i in 1:nrow(x)){
+      x[i,ncol(x)]=x[i,ncol(x)]/max_zmienna
+    }
+  x<-x[order(-x$zmienna_syntetyczna),]
+  return(x[1])
+}
+
+```
+
+Wywo³anie funkcji dla zbioru dane_porzadkowanie - podzbioru wyjœciowych danych
+
+```{r}
+funkcja_porzadkowanie_metoda_sum(dane_porzadkowanie)
+
+```
+
+Funkcja zwraca nam indeksy uporz¹dkowanych obiektów, tj. 1-wsze miejsce zaj¹³ obiekt z numerem indeksu 2, 2-gie miejsce obiekt z numerem indeksu równym 3, z kolei miejsce ostatnie zaj¹³ obiekt o numerze indeksu równym 7. 
+
+

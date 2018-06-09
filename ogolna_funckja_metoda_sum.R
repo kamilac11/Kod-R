@@ -1,5 +1,5 @@
 library(readxl)
-zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_sie_obiektow.xlsx", 
+zbior_danych <- read_excel("datasets/8_Rozniacych_sie_obiektow.xlsx", 
                            sheet = "Arkusz1", col_types = c("numeric","text", 
                                                             "text", "text", "text", "text", "blank", 
                                                             "numeric", "numeric", "numeric", 
@@ -8,16 +8,14 @@ zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_s
                                                             "text", "numeric", "text", "text", 
                                                             "text", "numeric", "numeric", "numeric", 
                                                             "numeric", "numeric", "numeric"))
-
-
-#po przyjrzeniu siê zbiorowi który chcesz poddac porz¹dkowaniu, wybierz podzbior zmiennych iloœciowych, na ktorych chcerz pracowaæ
+#po przyjrzeniu si? zbiorowi kt?ry chcesz poddac porz?dkowaniu, wybierz podzbior zmiennych ilo?ciowych, na ktorych chcerz pracowa?
 #w miesce "" wpisz nazwy kolumn
 dane_porzadkowanie<-zbior_danych[c("Nr","CENA.BRUTTO_[pln]","MOC_[km]","POJEMNOSC.SKOKOWA_[cm3]","ROK.PRODUKCJI","PRZEBIEG_[km]")]
 
 
 
 #zamiana na stymulante przebiegu( jest to destymulanta) stymulacja metoda przeksztalcenia roznicowego
-#UWAGA U¯YTKOWNIK MUSI WIEDZIEC JAKI CHARAKTER MAJA JEGO ZMIENNE, zakladam ze powinny
+#UWAGA U?YTKOWNIK MUSI WIEDZIEC JAKI CHARAKTER MAJA JEGO ZMIENNE, zakladam ze powinny
 #byc stymulantami, wiec jesli u niego nie sa to musi to zmienic
 
 
@@ -71,7 +69,7 @@ funkcja_porzadkowanie_metoda_sum<-function(x){
     }
     
   x<-x[order(-x$zmienna_syntetyczna),]
-  print("Numery indeksów obiektów po uporz¹dkowaniu: ")
+  print("Numery indeks?w obiekt?w po uporz?dkowaniu: ")
   return(x[1])
 }
 

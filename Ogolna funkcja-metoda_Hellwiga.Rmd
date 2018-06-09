@@ -1,0 +1,154 @@
+---
+title: "Funkcja dokonuj¹ca porz¹dkowania za pomoc¹ metody Hellwiga"
+#author: "Kamila Choja"
+#date: "22 maja 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+#Wstêp
+
+Na pocz¹tku u¿ytkownik przed skorzystaniem z funkcji musi zaimportowaæ dane, które chce poddaæ porz¹dkowaniu. W tym celu mo¿e u¿yæ np. takiego wywo³ania z podaniem swojej œcie¿ki pliku formatu xlsx, który chce poddaæ porz¹dkowaniu.
+Jako przyk³ad zaimportowa³am tabele zawieraj¹c¹ 8 obiektów, bêd¹cych ofertami sprzeda¿y aut. 
+
+```{r}
+library(readxl)
+zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_sie_obiektow.xlsx", 
+                           sheet = "Arkusz1", col_types = c("numeric","text", 
+                           "text", "text", "text", "text",                                                                              "blank","numeric", "numeric", "numeric", 
+                              "numeric", "numeric", "text",  "numeric", 
+                              "text", "text", "text", "text","text", 
+                                  "text", "numeric", "text", "text", 
+                                   "text", "numeric", "numeric",                                                                              "numeric", 
+                                   "numeric", "numeric", "numeric"))
+
+```
+Podgl¹d danych:
+```{r}
+head(zbior_danych)
+```
+##Podzbiór danych
+
+W kolejnym, kroku po przyjrzeniu siê zbiorowi danych, u¿ytkownik musi zadecydowaæ na których danych iloœciowych chce pracowaæ - wa¿na jest znajomoœæ danych. Dodatkowo pierwsz¹ kolumn¹ musi byæ kolumna zawieraj¹ca numery indeksów obiektów, ze wzglêdu na to, ¿e w wyniku zastosowania funkcji odpowiedzialnej za porz¹dkowanie, zostan¹ zwrócone w kolejnoœci malej¹cej numery indeksów, mówi¹ce o kolejnoœci uporz¹dkowania. W zwi¹zku z tym, za pomoc¹ poni¿szej procedury u¿ytkownik tworzy podzbiór zaimportowanego zbioru, gdzie w miejsce "" wpisuje nazwy kolumn zawieraj¹cych zmienne iloœciowe, wybrane do porz¹dkowania(przyjmijmy za³o¿enie, ¿e podzbiór bêdzie nazywa³ siê dane_porzadkowanie - bêdzie to pomocne w dalszej czêœci programu).
+U mnie wybranymi kolumnami s¹: cena, moc, pojemnoœæ, rok produkcji, przebieg. 
+```{r}
+dane_porzadkowanie<-zbior_danych[c("Nr","CENA.BRUTTO_[pln]","MOC_[km]",
+                                   "POJEMNOSC.SKOKOWA_[cm3]",
+                                   "ROK.PRODUKCJI","PRZEBIEG_[km]")]
+
+```
+##Transformacje danych
+
+Chc¹c zastosowaæ metodê Hellwiga do uporz¹dkowania zbioru, wymaganym jest aby zmienne mia³y charakter stymulant oraz by zosta³y poddane transformacji normalizacyjnej. Aby funckja dokonuj¹ca porz¹dkowania dawa³a poprawny wynik, u¿utkownik musi zaj¹æ siê tranformacj¹ przed jej zastosowaniem. Poni¿ej poda³am tego przyk³ad.
+Dla zmiennych które stymulantami nie s¹, nale¿y dokonaæ stymulacji. Wsród moich zmiennych poddanych porz¹dkowaniu, do stymulant nie nale¿y zmienna zmienna: przebieg - jest destymulant¹, w zwi¹zku z tym, zosta³a przekszta³cona na stymulante, za pomoc¹ przekszta³cenia ilorazowego podanego w postaci funkcji:
+
+```{r}
+stymulacja_przeksztalcenie_ilorazowe<-function(x,y){
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=1/x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+```
+
+Gdy u¿ytkownik chce skorzystaæ z tej funkcji, w miejsce x musi wpisaæ nazwê zbioru, a w miejsce y nazwê kolumny w "", któr¹ chce poddaæ stymulacji.
+UWAGA - kolumny wymagaj¹ce stymulacji, musz¹ zostaæ osobno poddane dzia³aniu poni¿szej funkcji, dodatkowo po ka¿dym zastosowaniu funkcji, nale¿y nadpisaæ zbiór by zmiany zosta³y zapisane.
+
+```{r}
+dane_porzadkowanie<-stymulacja_przeksztalcenie_ilorazowe(dane_porzadkowanie, "PRZEBIEG_[km]")
+```
+
+W celu uzyskania porównywalnoœci miêdzy zmiennymi, zosta³y one poddane transofrmacji normalizacyjnej - standaryzacji, dziêki temu ka¿da zmienna uzyskuje œredni¹ wartoœæ oczekiwan¹ równ¹ 0, a odchylenie standardowe równe 1. Poni¿ej zosta³a zaprezentowana funkcja dokonuj¹ca standaryzacji.
+
+```{r} 
+standaryzacja<-function(x){
+      suma=0
+      srednia=0
+      odchylenie=0
+      for (j in 2:ncol(x)){
+        suma[j]=sum(x[j])
+        srednia[j]=suma[j]/nrow(x)
+        suma_kwadratow=0
+        kwadrat=0
+        for(i in 1:nrow(x)){
+          kwadrat=(x[i,j]-srednia[j])^2
+          suma_kwadratow=suma_kwadratow+kwadrat
+        }
+        odchylenie[j]=sqrt(suma_kwadratow/nrow(x))  
+        for (i in 1:nrow(x)){
+          x[i,j]=(x[i,j]-srednia[j])/odchylenie[j]
+        } 
+      }
+      return(x)
+    }
+```
+
+##Funkcja porz¹dkuj¹ca metod¹ Hellwiga
+
+W celu dokonania porz¹dkowania na unormowanych danych, nale¿y zastosowaæ poni¿sz¹ funkcjê tj. metoda_Hellwiga, która jest postaci:
+
+```{r}
+metoda_Hellwiga<-function(x){
+  x<-standaryzacja(x) #standaryzacja zbioru stymulant
+#wyznaczenie obiektu wzorcowego, zmienne maja charakter stymulant wiec wspolrzedne 
+#obiekt_wz = max_j
+obiekt_wz=0
+for (j in 2:ncol(x)){  #od 2kolumny bo 1 kolumna to Nr - index
+  obiekt_wz[j]=max(x[j])
+    }
+
+## odleglosci od kazdego obiektu 
+odleg<- x[c("Nr" )]
+for (i in 1:nrow(x)){
+  SUMKA=0
+  for (j in 2:ncol(x)){
+    SUMKA=SUMKA+(x[i,j]-obiekt_wz[j])^2
+  }
+  odleg[i,2]=sqrt(SUMKA) #kolumna zawierajaca odleglosci
+}  
+
+#odchylenie standardowe dla odleglosci - moze tez tu mozna skorzystac z funkcji z tym
+#ze dla innego argumentu
+d_0=0
+suma=0
+srednia=0
+odchylenie=0
+for (j in 2:ncol(odleg)){
+  suma[j]=sum(odleg[j])
+  srednia[j]=suma[j]/nrow(odleg)
+  suma_kwadratow=0
+  kwadrat=0
+  for(i in 1:nrow(odleg)){
+    kwadrat=(odleg[i,j]-srednia[j])^2
+    suma_kwadratow=suma_kwadratow+kwadrat
+  }
+  
+  odchylenie[j]=sqrt(suma_kwadratow/nrow(odleg))  
+  d_0=srednia[j]+2*odchylenie[j]  #d_0 to po prostu wartosc
+}
+
+#ostatnia kolumna to jak zawsze zmienna syntetyczna
+    x[,"zmienna_syntetyczna"] <-0
+        for (i in 1:nrow(x)){
+      x[i,ncol(x)]=1-(odleg[i,2]/d_0)
+        }
+x<-x[order(-x$zmienna_syntetyczna),]
+return(x[1])
+}
+
+```
+
+Wywo³anie funkcji dla zbioru dane_porzadkowanie - podzbioru wyjœciowych danych
+
+```{r}
+metoda_Hellwiga(dane_porzadkowanie)
+
+```
+
+Na podstawie powy¿szego wyniku, widaæ, ¿e 1-wsze miejsce zajê³a oferta sprzeda¿y z numerem indeksu = 2, a ostatnie oferta z numerem indeksu o numerzer 7.  
+

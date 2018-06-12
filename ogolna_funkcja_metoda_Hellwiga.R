@@ -1,7 +1,7 @@
 #MEOTDA WzORCOWA
 
 library(readxl)
-zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_sie_obiektow.xlsx", 
+zbior_danych <- read_excel("datasets/8_Rozniacych_sie_obiektow.xlsx", 
                            sheet = "Arkusz1", col_types = c("numeric","text", 
                                                             "text", "text", "text", "text", "blank", 
                                                             "numeric", "numeric", "numeric", 

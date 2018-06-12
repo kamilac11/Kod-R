@@ -1,0 +1,201 @@
+---
+title: "Porównanie wyników porz¹dkowania, ze wzglêdu na ró¿ne sposoby wyznaczania zmiennej syntetycznej"
+#author: "Kamila Choja"
+#date: "22 maja 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+#Wstêp
+Zbiór zawieraj¹cy 8 najbardziej ró¿ni¹cych siê obiektów, zosta³ poddany porz¹dkowaniu, przy wykorzystaniu metody opartej na zmiennej syntetycznej, sztuczna funkcja, która ka¿demu obiektu przyporz¹dkowuje pewn¹ wartoœæ zmiennych po ich przekszta³ceniu. Poni¿ej zostan¹ zaprezentowane zestawienie wyników porz¹dkowania ze wzglêdu na zastosowanie ró¿nych sposobów wyliczenia zmiennej syntetycznej, m.in. przy wykorzystaniu œredniej arytmetycznej, œredniej geometrycznej, œredniej harmonicznej. Do porz¹dkowania wybrano metodê bezwzorcow¹ - metodê rang.
+Na wstêpie nale¿y dodaæ, ¿e wszystkie kroki porz¹dkowania za wyj¹tkiem sposobu liczenia zmiennej syntetycznej, s¹ identyczne w ka¿dym podejœciu(stymulacja, normalizacja zmiennych, przypisywanie rang).
+
+#Przygotowanie zbioru 
+
+
+W pierwszej kolejnoœci nale¿y zaimportowaæ zbiór obiektów. Porz¹dkowanie bêdzie przeprowadzone na podstawie wartoœci zmiennych: cena, moc, pojemnoœæ, rok produkcji, przebieg
+```{r}
+library(readxl)
+zbior_danych <- read_excel("~/Praca licencjacka/Moje dane_+zrodlo/8_Rozniacych_sie_obiektow.xlsx", 
+                           sheet = "Arkusz1", col_types = c("numeric","text", 
+                           "text", "text", "text", "text",                                                                              "blank","numeric", "numeric", "numeric", 
+                              "numeric", "numeric", "text",  "numeric", 
+                              "text", "text", "text", "text","text", 
+                                  "text", "numeric", "text", "text", 
+                                   "text", "numeric", "numeric",                                                                              "numeric", 
+                                   "numeric", "numeric", "numeric"))
+
+```
+
+Podgl¹d danych:
+```{r}
+head(zbior_danych)
+```
+
+Przypisanie innej nazwy dla danych, aby siê wygodniej pracowa³o na nich:
+```{r}
+dane2<-zbior_danych
+
+```
+Aby ka¿da zmienna, tj. cecha mia³a ten sam charakter nale¿y przeprowadziæ stymulacjê zmiennej przebieg - uczyniæ z niej stymulantê, w tym celu skorzystam z przekszta³cenia ilorazowego
+
+$$
+x_{ij}^{S}=[x_{ij}^{D}]^{-1},  \quad i = 1,2, \ldots, n, \quad j=1,2,\ldots, m.
+$$
+Kod w R:
+```{r}
+for (i in 1:nrow(dane2)){
+  dane2[i,11]=1/dane2[i,11]
+}
+```
+
+
+W celu uzyskania porównywalnoœci miêdzy zmiennymi, zosta³y one poddane transofrmacji normalizacyjnej - unitaryzacji, dziêki temu wartoœci ka¿dej zmiennej nale¿¹ do przedzia³u [0,1]
+
+$$
+z_{ij}=\frac{x_{ij} - \min\limits_{i}\{x_{ij}\}}{\max\limits_{i} \{x_{ij}\} - \min\limits_{i} \{x_{ij}\}}, \quad i = 1,2, \ldots, n, \quad j=1,2,\ldots, m. 
+$$
+Kod w R
+```{r}
+maksi=0
+minim=0
+for (j in 7:11){
+  maksi[j]=max(dane2[j])
+  minim[j]=min(dane2[j])
+  for (i in 1:nrow(dane2)){
+    dane2[i,j]=(dane2[i,j]-minim[j])/(maksi[j]-minim[j])
+  }
+}
+
+dane2$`CENA.BRUTTO_[pln]` #podl¹d danych po transformacji normalizacyjnej
+```
+
+W kolejnym kroku dla ka¿dego obiektu, w ka¿dej zmiennej opisuj¹cej obiekt przyporz¹dkowano rangê na podstawie wartoœci wartoœci tej zmiennej w odniesieniu do pozosta³ych obiektów. Gdzie rangê=1 uzyska³ obiekt, którego znormalizowana wartoœæ j-tej cechy by³a najwiêksza. W tym celu stworzono pomocnice kolumny, oraz zastosowano funkckê rank(-x)
+
+```{r}
+dane2$ranga1_cena=rank(-dane2$`CENA.BRUTTO_[pln]`)
+dane2$ranga2_moc=rank(-dane2$`MOC_[km]`)
+dane2$ranga3_pojemnosc=rank(-dane2$`POJEMNOSC.SKOKOWA_[cm3]`)
+dane2$ranga4_rok=rank(-dane2$ROK.PRODUKCJI)
+dane2$ranga5_przebieg=rank(-dane2$`PRZEBIEG_[km]`)
+```
+#Wyznaczanie zmiennej syntetycznej
+
+#Wyznaczanie zmiennej syntetycznej przy wykorzystaniu œredniej arytmetycznej
+
+Zmienna syntetyczna jest postaci:
+
+$$
+s_{i}=\frac{1}{m}\sum_{j=1}^{m} z_{ij},\quad i=1, 2, \ldots, n
+$$
+gdzie m - to liczba zmiennych opisuj¹cych obiekty, 
+
+```{r}
+dane2[,"zmienna_syntetyczna_ar"] <- NA #zainicjowanie pustej kolumny
+
+for (i in 1:nrow(dane2)){
+  dane2[i,ncol(dane2)]=(dane2[i,30]+dane2[i,31]+dane2[i,32]+dane2[i,33]+dane2[i,34])/5
+}
+
+```
+
+##Wyznaczanie zmiennej syntetycznej przy wykorzystaniu œredniej geometrycznej
+
+Zmienna syntetyczna jest postaci:
+
+$$
+s_{i}=\prod_{j=1}^{m} (z_{ij})^{\frac{1}{m}}, \quad i=1, 2, \ldots, n,
+$$
+gdzie m - to liczba zmiennych opisuj¹cych obiekty,
+
+```{r}
+dane2[,"zmienna_syntetyczna_ge"] <- NA #zainicjowanie pustej kolumny
+
+for (i in 1:nrow(dane2)){
+  dane2[i,ncol(dane2)]=(dane2[i,30]*dane2[i,31]*dane2[i,32]*dane2[i,33]*dane2[i,34])^(1/5)
+}
+```
+
+##Wyznaczanie zmiennej syntetycznej przy wykorzystaniu œredniej harmonicznej
+
+Zmienna syntetyczna jest postaci:
+
+$$
+s_{i}=\big[\sum_{j=1}^{m} \frac{1}{z_{ij}}\big]^{-1} \cdot m, \quad i=1, 2, \ldots, n,
+$$
+gdzie m - to liczba zmiennych opisuj¹cych obiekty,
+
+```{r}
+dane2[,"zmienna_syntetyczna_ha"] <- NA #zainicjowanie pustej kolumny
+
+for (i in 1:nrow(dane2)){
+  dane2[i,ncol(dane2)]=5*1/((dane2[i,30])^(-1)+(dane2[i,31])^(-1)+(dane2[i,32])^(-1)+
+                              (dane2[i,33])^(-1)+(dane2[i,34])^(-1))
+}
+```
+Podgl¹d fragmentu tabeli, po wyliczeniu zmiennych syntetycznych, gdzie kolumna "Nr" oznacza indeksy obiektów poddanych porz¹dkowaniu, a kolumny "zmienna_syn_ar", "zmienna_syntetyczna_ge", "zmienna_syntetyczna_ha", oznaczaj¹ kolejno: zmienn¹ syntetyczn¹ wyznaczon¹ za pomoc¹ œredniej arytmetycznej, œredniej geometrycznej, œredniej harmonicznej.
+```{r table}
+library(dplyr)
+knitr::kable(select(dane2, c("Nr","zmienna_syntetyczna_ar","zmienna_syntetyczna_ge",
+                             "zmienna_syntetyczna_ha")))
+
+```
+
+##Uporz¹dkowanie obiektów ze wzglêdu na wartoœci wyznaczonych zmiennych syntetycznych:
+
+Nastêpnie tabela "dane2" zosta³a uporz¹dkowana ze wzglêdu na kolumnê "zmienna_syntetyczna_ar", a w kolejnym kroku zosta³a stworzona table "dane_arytmetyczna", zawiera obiektu uporz¹dkowane ze wzglêdu na kolumnê "zmienna_syntetyczna_ar", oraz kolumny dotycz¹ce indeksu, marki, modelu i zmiennej syntetycznejw wyznaczonej za pomoc¹ œredniej harmonicznej, œredniej geometrycznej. 
+Analogiczne uporz¹dkowanie oraz stworzenie nowej kolumny zosta³o przeprowadzone ze zwglêdu na kolumny "zmienna_syntetyczna_ge", "zmienna_syntetyczna_ha", co zosta³o zamieszczone poni¿ej. 
+
+```{r}
+dane2<-dane2[order(dane2$zmienna_syntetyczna_ar),]
+```
+
+```{r}
+library(dplyr)
+
+dane_arytmetyczna<-select(dane2, c("Nr","MARKA", "MODEL",
+                       "zmienna_syntetyczna_ar","zmienna_syntetyczna_ge",
+                       "zmienna_syntetyczna_ha"))
+
+```
+
+```{r}
+dane2<-dane2[order(dane2$zmienna_syntetyczna_ge),]
+dane_geometryczna<-select(dane2, c("Nr","MARKA", "MODEL",
+                       "zmienna_syntetyczna_ge","zmienna_syntetyczna_ar",
+                       "zmienna_syntetyczna_ha"))
+```
+
+```{r}
+dane2<-dane2[order(dane2$zmienna_syntetyczna_ha),]
+dane_harmoniczna<-select(dane2, c("Nr","MARKA", "MODEL",
+                       "zmienna_syntetyczna_ha","zmienna_syntetyczna_ar",
+                       "zmienna_syntetyczna_ge"))
+```
+
+Podgl¹d tabel: "dane_arytmetyczna", "dane_geometryczna", "dane_harmoniczna"
+
+```{r}#{r table2}
+#dane_arytmetyczna
+knitr::kable(dane_arytmetyczna[])
+```
+
+```{r}#{r table3}
+#dane_geometryczna
+knitr::kable(dane_geometryczna[])
+```
+
+```{r}#{r table4}
+#dane_harmoniczna
+knitr::kable(dane_harmoniczna[])
+```
+
+#Wnioski
+Na podstawie powy¿szych tabel widaæ, i¿ ró¿nice w wynikach uporz¹dkowania s¹ niezauwa¿alne dla obiektów uporz¹dkowanych ze zwglêdu na zmienn¹ syntetyczn¹ wyznaczon¹ za pomoc¹ œredniej arytmetycznej oraz œredniej geometrycznej. Byæ mo¿e gdyby zosta³y dobrane obiekty, których zmienne by³yby bardziej zró¿nicowane w obiektach to mo¿na by zauwa¿yæ ró¿nice po przeprowadzeniu porz¹dku.
+Z kolei w przypadku obiektów dla których zmienna syntetyczna zosta³a obliczona z wykorzystaniem œredniej harmonicznej, widaæ i¿ zmianie uleg³a pozycja 2 oraz ostatnia. W wyniku porz¹dku, na miejscu 2 znalaz³o siê Subaru, a na ostanim miejscu Seat. 
+

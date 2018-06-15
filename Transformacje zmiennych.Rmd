@@ -1,0 +1,153 @@
+---
+title: "Transformacje zmiennych"
+#author: "Kamila Choja"
+#date: "22 maja 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+#Wstêp
+
+Na pocz¹tku u¿ytkownik przed skorzystaniem z funkcji musi zaimportowaæ dane, które chce poddaæ porz¹dkowaniu. W tym celu mo¿e u¿yæ np. takiego wywo³ania z podaniem swojej œcie¿ki pliku formatu xlsx, który chce poddaæ porz¹dkowaniu.
+Jako przyk³ad zaimportowa³am tabele zawieraj¹c¹ 8 obiektów, bêd¹cych ofertami sprzeda¿y aut. 
+
+```{r}
+library(readxl)
+zbior_danych <- read_excel("~/Praca licencjacka/R studio/repozytorium/datasets/8_Rozniacych_sie_obiektow.xlsx")
+
+```
+Podgl¹d danych:
+```{r}
+head(zbior_danych)
+```
+##Podzbiór danych
+
+W kolejnym, kroku po przyjrzeniu siê zbiorowi danych, u¿ytkownik musi zadecydowaæ na których danych iloœciowych chce pracowaæ - wa¿na jest znajomoœæ danych. Dodatkowo pierwsz¹ kolumn¹ musi byæ kolumna zawieraj¹ca numery indeksów obiektów, ze wzglêdu na to, ¿e w wyniku zastosowania funkcji odpowiedzialnej za porz¹dkowanie, zostan¹ zwrócone w kolejnoœci malej¹cej numery indeksów, mówi¹ce o kolejnoœci uporz¹dkowania. W zwi¹zku z tym, za pomoc¹ poni¿szej procedury u¿ytkownik tworzy podzbiór zaimportowanego zbioru, gdzie w miejsce "" wpisuje nazwy kolumn zawieraj¹cych zmienne iloœciowe, wybrane do porz¹dkowania(przyjmijmy za³o¿enie, ¿e podzbiór bêdzie nazywa³ siê dane_porzadkowanie - bêdzie to pomocne w dalszej czêœci programu).
+U mnie wybranymi kolumnami s¹: cena, moc, pojemnoœæ, rok produkcji, przebieg. 
+
+```{r}
+dane_porzadkowanie<-zbior_danych[c("Nr","CENA.BRUTTO_[pln]","MOC_[km]",
+                                   "POJEMNOSC.SKOKOWA_[cm3]",
+                                   "ROK.PRODUKCJI","PRZEBIEG_[km]")]
+
+```
+#Stymulacja zmiennych
+
+Poni¿ej zostan¹ przedstawione metody stymulacji zmiennych, ograniczam siê do przypadku, ¿e dana zmienna jest destymulant¹ i nale¿y przeprowadziæ dla niej stymulacje. W tym celu stworzy³am dwie funkcje: stymulacja_przeksztalcenie_ilorazowe(x,y) oraz stymulacja_przeksztalcenie_roznicowe(x,y). 
+W miejscu argumentu x nale¿y wpisaæ nazwê zbioru na którym dokonywane jest porz¹dkowanie, z kolei w miejscu argumentu y nale¿y podaæ nazwê kolumny poddanej stymulacji, z tym ¿e nazwa kolumny musi zostaæ podana w "". 
+
+```{r}
+stymulacja_przeksztalcenie_ilorazowe<-function(x,y){
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=1/x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+```
+
+```{r}
+stymulacja_przeksztalcenie_roznicowe<-function(x,y){
+  max_wartosc=max(x[which(colnames(x)==y)])
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=max_wartosc-x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+```
+
+UWAGA! Stymulacja zmiennych dokonywana jest pojedynczo, tj. je¿eli w naszym zbiorze jest wiele zmienych maj¹cych charakter destymulant, dla ka¿dej z nich musimy u¿yæ funkcji a na sam koniec nadpisaæ nasz zbiór, tym nowym wystumulowanym, dziêki czemu przekszta³cenia zostan¹ zapisane. 
+
+
+```{r}
+#charakter destymulanty ma zmienna: "PRZEBIEG_[km]", w zwiazku z czym to ona zostanie poddana stymulacji - po tej operacji od razu nadpisuje zbior ktory dalej zostanie poddany porzadkowaniu
+
+dane_porzadkowanie<-stymulacja_przeksztalcenie_ilorazowe(dane_porzadkowanie, "PRZEBIEG_[km]")
+```
+
+#Transformacje normalizacyjne
+
+W celu uzyskania porównywalnoœci miêdzy zmiennymi, zosta³y one poddane transofrmacji normalizacyjnej - standaryzacji, unitaryzacji lub przekszta³ceniu ilorazowemu. W zale¿noœci od charakteru zmiennych, u¿ytkownik musi wybraæ jedn¹ z tych metod dla zmiennych, które bêd¹ wykorzystywane w porz¹dkowaniu. 
+
+
+##Standaryzacja
+
+```{r} 
+standaryzacja<-function(x){
+  suma=0
+  srednia=0
+
+  odchylenie=0
+  for (j in 2:ncol(x)){
+    suma[j]=sum(x[j])
+    srednia[j]=suma[j]/nrow(x)
+    suma_kwadratow=0
+    kwadrat=0
+    for(i in 1:nrow(x)){
+      kwadrat=(x[i,j]-srednia[j])^2
+      suma_kwadratow=suma_kwadratow+kwadrat
+    }
+    
+    odchylenie[j]=sqrt(suma_kwadratow/nrow(x))  
+    
+    for (i in 1:nrow(x)){
+      x[i,j]=(x[i,j]-srednia[j])/odchylenie[j]
+    } 
+  }
+  return(x)
+}
+```
+
+##Unitaryzacja 
+
+```{r}
+unitaryzacja<-function(x){
+maksi=0
+minim=0
+for (j in 2:ncol(x)){
+  maksi[j]=max(x[j])
+  minim[j]=min(x[j])
+  for (i in 1:nrow(x)){
+    x[i,j]=(x[i,j]-minim[j])/(maksi[j]-minim[j])
+  }
+}
+return(x)
+}
+```
+
+##Przekszta³cenie ilorazowe
+
+```{r}
+przeksztalcenie_ilorazowe<-function(x){
+    suma=0
+    srednia=0
+    for (j in 2:ncol(x)){
+      suma[j]=sum(x[j])
+      srednia[j]=suma[j]/nrow(x)
+      
+    for(i in 1:nrow(x)){
+      x[i,j]=x[i,j]/srednia[j]
+      }
+    } 
+  return(x)
+}
+```
+
+##Wywo³ywanie funkcji 
+Aby wywo³aæ funkcjê nale¿y podaæ jej nazwê, a nastêpnie w miejsce argumentu wpisaæ nazwê zbioru na którym u¿ytkownik pracuje. 
+Np. dla wywo³ania funckji przeksztalcenie_ilorazowe:
+
+```{r}
+przeksztalcenie_ilorazowe(dane_porzadkowanie)
+```
+
+Oczywiœcie po wybraniu odpowiedniego sposobu transformacji normalizacyjnej, nale¿y nadpisaæ wystymulowany zbiór, który bêdzie dalej poddany porz¹dkowaniu. 
+
+```{r}
+dane_porzadkowanie<-przeksztalcenie_ilorazowe(dane_porzadkowanie)
+```
+

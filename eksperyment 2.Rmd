@@ -1,0 +1,296 @@
+---
+title: "Eksperyment 2 "
+#author: "Kamila Choja"
+#date: "22 maja 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+#Wstêp
+
+Zostanie tutaj zaprezentowanie porownanie wyników porz¹dkowania liniowego ca³ego zbioru dla par: metoda rang i metoda sum, metoda rang i metoda Hellwiga, metoda sum i metoda Hellwiga.
+Na pocz¹tku u¿ytkownik musi zaimportowaæ dane, które chce poddaæ porz¹dkowaniu. W tym celu mo¿e u¿yæ np. takiego wywo³ania z podaniem swojej œcie¿ki pliku formatu xlsx, który chce poddaæ porz¹dkowaniu.
+
+
+```{r}
+library(readxl)
+zbior_danych <- read_excel("datasets/zbior_danych.xlsx", 
+                           sheet = "DANE_INNA_WERSJA")
+                           
+                           
+
+```
+Podgl¹d danych:
+```{r}
+head(zbior_danych)
+```
+##Podzbiór danych
+
+W kolejnym, kroku po przyjrzeniu siê zbiorowi danych, u¿ytkownik musi zadecydowaæ na których danych iloœciowych chce pracowaæ - wa¿na jest znajomoœæ danych. Dodatkowo pierwsz¹ kolumn¹ musi byæ kolumna zawieraj¹ca numery indeksów obiektów, ze wzglêdu na to, ¿e w wyniku zastosowania funkcji odpowiedzialnej za porz¹dkowanie, zostan¹ zwrócone w kolejnoœci malej¹cej numery indeksów, mówi¹ce o kolejnoœci uporz¹dkowania. W zwi¹zku z tym, za pomoc¹ poni¿szej procedury u¿ytkownik tworzy podzbiór zaimportowanego zbioru, gdzie w miejsce "" wpisuje nazwy kolumn zawieraj¹cych zmienne iloœciowe, wybrane do porz¹dkowania(przyjmijmy za³o¿enie, ¿e podzbiór bêdzie nazywa³ siê dane_porzadkowanie - bêdzie to pomocne w dalszej czêœci programu).
+U mnie wybranymi kolumnami s¹: cena, moc, pojemnoœæ, rok produkcji, przebieg. 
+```{r}
+dane_porzadkowanie<-zbior_danych[c("Nr","CENA.BRUTTO_[pln]","MOC_[km]",
+                                   "POJEMNOSC.SKOKOWA_[cm3]",
+                                   "ROK.PRODUKCJI","PRZEBIEG_[km]")]
+
+```
+
+##Transformacje danych
+Przed zastosowaiem metod, nale¿y dokonaæ ich transformacji. W pierwszym kroku nale¿y dokonaæ stymulacji destymulant - dla metody rang i metody Hellwiga zostanie u¿yte przekszta³cenie ilorazowe, dla metody sum przekszta³cenie ilorazowe. 
+Po stymulacji mo¿na przejœæ do transformacji normalizacyjnej - metoda sum i metoda rang za pomoc¹ normalizacji, natomiast metoda Hellwiga za pomoc¹ standaryzacji.
+Do powy¿szych operacji, zostan¹ wykorzystane wczeœniej zbudowane ogolne funkcje odpowiedzialne za to.
+
+
+```{r}
+stymulacja_przeksztalcenie_roznicowe<-function(x,y){
+  max_wartosc=max(x[which(colnames(x)==y)])
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=max_wartosc-x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+
+stymulacja_przeksztalcenie_ilorazowe<-function(x,y){
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=1/x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+
+unitaryzacja<-function(x){
+  maksi=0
+  minim=0
+  for (j in 2:ncol(x)){
+    maksi[j]=max(x[j])
+    minim[j]=min(x[j])
+    for (i in 1:nrow(x)){
+      x[i,j]=(x[i,j]-minim[j])/(maksi[j]-minim[j])
+    }
+  }
+  return(x)
+}
+
+standaryzacja<-function(x){
+      suma=0
+      srednia=0
+      odchylenie=0
+      for (j in 2:ncol(x)){
+        suma[j]=sum(x[j])
+        srednia[j]=suma[j]/nrow(x)
+        suma_kwadratow=0
+        kwadrat=0
+        for(i in 1:nrow(x)){
+          kwadrat=(x[i,j]-srednia[j])^2
+          suma_kwadratow=suma_kwadratow+kwadrat
+        }
+        odchylenie[j]=sqrt(suma_kwadratow/nrow(x))  
+        for (i in 1:nrow(x)){
+          x[i,j]=(x[i,j]-srednia[j])/odchylenie[j]
+        } 
+      }
+      return(x)
+    }
+
+
+```
+
+Gdy u¿ytkownik chce skorzystaæ z tej funkcji, w miejsce x musi wpisaæ nazwê zbioru, a w miejsce y nazwê kolumny w "", któr¹ chce poddaæ stymulacji.
+
+UWAGA - kolumny wymagaj¹ce stymulacji, musz¹ zostaæ osobno poddane dzia³aniu poni¿szej funkcji, dodatkowo po ka¿dym zastosowaniu funkcji, nale¿y nadpisaæ zbiór by zmianny zosta³y zapisane.
+
+```{r}
+dane_rang<-stymulacja_przeksztalcenie_ilorazowe(dane_porzadkowanie,"PRZEBIEG_[km]")
+dane_hellwig<-stymulacja_przeksztalcenie_ilorazowe(dane_porzadkowanie,"PRZEBIEG_[km]")
+dane_sum<-stymulacja_przeksztalcenie_roznicowe(dane_porzadkowanie,"PRZEBIEG_[km]")
+
+```
+Teraz dokonamy przekszta³cenia normalizacyjnego wystymulowanych podzbiorów. 
+
+```{r} 
+dane_sum<-unitaryzacja(dane_sum)
+dane_rang<-unitaryzacja(dane_rang)
+dane_hellwig<-standaryzacja(dane_hellwig)
+
+```
+
+#Porz¹dkowanie 
+
+W tej czêsci wystymulowane podzbiory zostan¹ poddane porz¹dkowaniu. W tym celu zostan¹ u¿yte poni¿sze funkcje odpowiedzialne za porz¹dkowanie metod¹ sum, rang oraz Hellwiga. Wszystkie funkcje zwracaj¹ numery indeksów uporz¹dkowanych obiektów, wg tendencji malej¹cej w hierarchi, ze wzglêdu na wartoœæ zmiennej syntetycznej. 
+
+
+```{r}
+
+funkcja_porzadkowanie_metoda_rang<-function(x){
+  y<-x #dzieki temu nie bede sztywno odwolywac sie do 1kolumny rang
+  for (i in 2:ncol(x)){
+    x[ncol(x)+1]=rank(-x[i])
+  }
+  #ostania kolumna to zmienna_syntetyczna - za pomoca metody sredniej arytmetycznej
+  x[,"zmienna_syntetyczna"] <-0
+  for(i in 1:nrow(x)){
+    for(j in (ncol(y)+1):(ncol(x)-1)){
+      x[i,ncol(x)]=x[i,ncol(x)]+x[i,j]
+      j=j+1
+    }
+    x[i,ncol(x)]=x[i,ncol(x)]/(ncol(x)-7)
+  }
+  x<-x[order(x$zmienna_syntetyczna),]
+  print("Numery indeksów obiektów po uporz¹dkowaniu: ")
+  return(x[1])
+}
+
+
+
+funkcja_porzadkowanie_metoda_sum<-function(x){
+    x[,"zmienna_syntetyczna"] <-0
+      for(i in 1:nrow(x)){
+        for(j in 2:(ncol(x)-1)){
+          x[i,ncol(x)]=x[i,ncol(x)]+x[i,j]
+            }
+    x[i,ncol(x)]=x[i,ncol(x)]/(ncol(x)-2) 
+#-2 bo interesuje nas ilosc zmiennych, poza nr indeksu i kolumna zmienna syntetetyczna
+      }
+    
+#wyeliminowanie ujemnych wartosci zmiennej syntetycznej
+    min_zmienna=min(x$zmienna_syntetyczna)
+    for(i in 1:nrow(x)){
+      x[i,ncol(x)]=x[i,ncol(x)]-min_zmienna
+    }
+#ostatnie przeksztalcenie normalizacja zm. syntetycznej
+    max_zmienna=max(x$zmienna_syntetyczna)
+    for(i in 1:nrow(x)){
+      x[i,ncol(x)]=x[i,ncol(x)]/max_zmienna
+    }
+  x<-x[order(-x$zmienna_syntetyczna),]
+  return(x[1])
+}
+
+funkcja_porzadkowanie_metoda_Hellwiga<-function(x){
+#wyznaczenie obiektu wzorcowego, zmienne maja charakter stymulant wiec wspolrzedne 
+obiekt_wz=0
+for (j in 2:ncol(x)){  #od 2kolumny bo 1 kolumna to Nr - index
+  obiekt_wz[j]=max(x[j])
+    }
+odleg<- x[c("Nr" )]
+for (i in 1:nrow(x)){
+  SUMKA=0
+  for (j in 2:ncol(x)){
+    SUMKA=SUMKA+(x[i,j]-obiekt_wz[j])^2
+  }
+  odleg[i,2]=sqrt(SUMKA) #kolumna zawierajaca odleglosci
+}  
+d_0=0
+suma=0
+srednia=0
+odchylenie=0
+for (j in 2:ncol(odleg)){
+  suma[j]=sum(odleg[j])
+  srednia[j]=suma[j]/nrow(odleg)
+  suma_kwadratow=0
+  kwadrat=0
+  for(i in 1:nrow(odleg)){
+    kwadrat=(odleg[i,j]-srednia[j])^2
+    suma_kwadratow=suma_kwadratow+kwadrat
+  }
+  
+  odchylenie[j]=sqrt(suma_kwadratow/nrow(odleg))  
+  d_0=srednia[j]+2*odchylenie[j]  #d_0 to po prostu wartosc
+}
+#ostatnia kolumna to jak zawsze zmienna syntetyczna
+    x[,"zmienna_syntetyczna"] <-0
+        for (i in 1:nrow(x)){
+      x[i,ncol(x)]=1-(odleg[i,2]/d_0)
+        }
+x<-x[order(-x$zmienna_syntetyczna),]
+return(x[1])
+}
+
+
+```
+
+Zastosowanie funkcji do znormalizowanych podzbiorów.
+
+```{r}
+dane_sum<-funkcja_porzadkowanie_metoda_sum(dane_sum)
+dane_rang<-funkcja_porzadkowanie_metoda_rang(dane_rang)
+dane_hellwig<-funkcja_porzadkowanie_metoda_Hellwiga(dane_hellwig)
+
+```
+#Porównanie wyników uporz¹dkowania
+
+W celu porównania wyników uporz¹dkowania zosta³y stworzone trzy tabele pomocnicze. Ka¿da tabela zawiera trzy kolumny, w dwóch pierwszych kolumnach znajduj¹ siê indeksy obiektów po uporz¹dkowaniu. Z kolei w kolumnie trzeciej-"porownanie"  znajduje siê jedna z dwóch wartoœci: 0 lub 1. Odpowiednio wartoœæ 1 jest przypisywana tym rekordom, dla których zgadza siê kolejnoœæ uporz¹dkowania przy zastosowaniu dwóch ró¿nych metod porz¹dkowania. 
+Dodatkowo zosta³y równie¿ stworzone trzy tabele o nazwie "podsumowanie". W nich 
+
+##Para 1: metoda rang i metoda sum
+
+```{r}
+tabela_porownawcza=data.frame(dane_rang,dane_sum)
+names(tabela_porownawcza)<-c("dane_rang","dane_sum")
+tabela_porownawcza$porownanie=0 
+
+#inwersja
+for(i in 1:nrow(tabela_porownawcza)){
+  if(tabela_porownawcza$dane_sum[i]==tabela_porownawcza$dane_rang[i]){
+    tabela_porownawcza$porownanie[i]=1
+  }
+}
+head(tabela_porownawcza,15)
+
+#podsumowanie 
+podsumowanie=as.data.frame(table(tabela_porownawcza$porownanie))
+names(podsumowanie)<-c("wartoœæ","ilosc wyst¹pieñ")
+podsumowanie
+
+```
+
+##Para 2: metoda rang i metoda Hellwiga
+
+```{r}
+tabela_porownawcza=data.frame(dane_rang,dane_hellwig)
+names(tabela_porownawcza)<-c("dane_rang","dane_hellwig")
+tabela_porownawcza$porownanie=0 
+
+#inwersja
+for(i in 1:nrow(tabela_porownawcza)){
+  if(tabela_porownawcza$dane_hellwig[i]==tabela_porownawcza$dane_rang[i]){
+    tabela_porownawcza$porownanie[i]=1
+  }
+}
+head(tabela_porownawcza,15)
+
+#podsumowanie 
+podsumowanie=as.data.frame(table(tabela_porownawcza$porownanie))
+names(podsumowanie)<-c("wartoœæ","ilosc wyst¹pieñ")
+podsumowanie
+
+```
+
+##Para 3: metoda sum i metoda hellwiga
+
+```{r}
+tabela_porownawcza=data.frame(dane_sum,dane_hellwig)
+names(tabela_porownawcza)<-c("dane_sum","dane_hellwig")
+tabela_porownawcza$porownanie=0 
+
+#inwersja
+for(i in 1:nrow(tabela_porownawcza)){
+  if(tabela_porownawcza$dane_hellwig[i]==tabela_porownawcza$dane_sum[i]){
+    tabela_porownawcza$porownanie[i]=1
+  }
+}
+head(tabela_porownawcza,15)
+
+#podsumowanie 
+podsumowanie=as.data.frame(table(tabela_porownawcza$porownanie))
+names(podsumowanie)<-c("wartoœæ","ilosc wyst¹pieñ")
+podsumowanie
+
+```
+
+##Podsumowanie
+Na podstawie powy¿szych wyników zauwa¿amy, ¿e najwiêcej zgodnoœci wyniku porz¹dkowania jest widoczne dla pary pierwszej - metody rang oraz metody sum. W przypadku kolejnych par, zgodnoœæ ta jest juz niewielka, ze wzglêdu na to ¿e w wyniku uporz¹dkowania obiekty zajmuj¹ np. o miejsce ni¿ej lub wy¿ej w stosunku do drugiej metody. 

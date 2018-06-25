@@ -1,0 +1,133 @@
+---
+title: "Porz¹dkowanie nieliniowe za pomoc¹ wybranych metod aglomeracyjnych"
+#author: "Kamila Choja"
+#date: "22 maja 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+#Wstêp
+
+Zostanie tutaj zaprezentowane zastosowanie nieliniowego porz¹dkowania danych przy pomocy istniej¹cych funkcji biblioteki cluster, w której to funkcja agnes umo¿liwiaj¹ca uporz¹dkowanie zbioru po wyborze odpowiedniej metody aglomeracyjnej. Mamy tu do wyboru metody: single - metoda najbli¿szego s¹siedztwa, complete - metoda najdalszego s¹siedztwa, ward - metoda Warda, average - metoda œredniej miêdzy grupowej. W poni¿ej zostanie zaprezentowane zastosowanie metod single oraz complete wraz z porównaniem wyników porz¹dkowania.
+
+##Import danych
+Na pocz¹tku nale¿y zaimportowaæ dane, które chcemy poddaæ porz¹dkowaniu. W tym celu nale¿y zaimportowaæ bibloteke readxl - gdy¿ dane pobieramy z excela, a w kolejnym kroku wywo³ujemy plik, podaj¹c nasz¹ œcie¿kê pliku z rozszerzeniem xlsx. My u¿yjemy tutaj zbioru zawieraj¹cego 8 obiektów, bêd¹cych ofertami sprzeda¿y aut. 
+
+```{r}
+library(readxl)
+zbior_danych <- read_excel("datasets/8_Rozniacych_sie_obiektow.xlsx", 
+                           sheet = "Arkusz1", col_types = c("numeric","text", 
+                           "text", "text", "text", "text",                                                                              "blank","numeric", "numeric", "numeric", 
+                              "numeric", "numeric", "text",  "numeric", 
+                              "text", "text", "text", "text","text", 
+                                  "text", "numeric", "text", "text", 
+                                   "text", "numeric", "numeric",                                                                              "numeric", 
+                                   "numeric", "numeric", "numeric"))
+
+```
+Podgl¹d danych:
+```{r}
+head(zbior_danych)
+```
+##Podzbiór danych
+
+W kolejnym, kroku po przyjrzeniu siê zbiorowi danych, u¿ytkownik musi zadecydowaæ na których danych iloœciowych chce pracowaæ - wa¿na jest znajomoœæ danych. Dodatkowo pierwsz¹ kolumn¹ musi byæ kolumna zawieraj¹ca numery indeksów obiektów, ze wzglêdu na to, ¿e w wyniku zastosowania funkcji odpowiedzialnej za porz¹dkowanie, zostan¹ zwrócone w kolejnoœci malej¹cej numery indeksów, mówi¹ce o kolejnoœci uporz¹dkowania. W zwi¹zku z tym, za pomoc¹ poni¿szej procedury u¿ytkownik tworzy podzbiór zaimportowanego zbioru, gdzie w miejsce "" wpisuje nazwy kolumn zawieraj¹cych zmienne iloœciowe, wybrane do porz¹dkowania(przyjmijmy za³o¿enie, ¿e podzbiór bêdzie nazywa³ siê dane_porzadkowanie - bêdzie to pomocne w dalszej czêœci programu).
+U mnie wybranymi kolumnami s¹: cena, moc, pojemnoœæ, rok produkcji, przebieg. 
+```{r}
+dane_porzadkowanie<-zbior_danych[c("Nr","CENA.BRUTTO_[pln]","MOC_[km]",
+                                   "POJEMNOSC.SKOKOWA_[cm3]",
+                                  "ROK.PRODUKCJI","PRZEBIEG_[km]")]
+
+```
+##Transformacje danych
+
+Przed samym porz¹dkowaniem, wymaganym jest aby zmienne mia³y charakter stymulant oraz by zosta³y poddane transformacji normalizacyjnej. Aby funkcja dokonuj¹ca porz¹dkowania dawa³a poprawny wynik, u¿ytkownik musi zaj¹æ siê tranformacj¹ przed jej zastosowaniem. Poni¿ej poda³am tego przyk³ad.
+Dla zmiennych które stymulantami nie s¹, nale¿y dokonaæ stymulacji. Wsród moich zmiennych poddanych porz¹dkowaniu, do stymulant nie nale¿y zmienna zmienna: przebieg - jest destymulant¹, w zwi¹zku z tym, zosta³a przekszta³cona na stymulantê, za pomoc¹ przekszta³cenia ilorazowego. 
+
+```{r}
+stymulacja_przeksztalcenie_ilorazowe<-function(x,y){
+  for (i in 1:nrow(x)){
+    x[i,which(colnames(x)==y)]=1/x[i,which(colnames(x)==y)]
+  }
+  return(x)
+}
+```
+
+Gdy u¿ytkownik chce skorzystaæ z tej funkcji, w miejsce x musi wpisaæ nazwê zbioru, a w miejsce y nazwê kolumny w "", któr¹ chce poddaæ stymulacji.
+UWAGA - kolumny wymagaj¹ce stymulacji, musz¹ zostaæ osobno poddane dzia³aniu poni¿szej funkcji, dodatkowo po ka¿dym zastosowaniu funkcji, nale¿y nadpisaæ zbiór by zmiany zosta³y zapisane.
+
+```{r}
+dane_porzadkowanie<-stymulacja_przeksztalcenie_ilorazowe(dane_porzadkowanie,"PRZEBIEG_[km]")
+```
+
+W celu uzyskania porównywalnoœci miêdzy zmiennymi, zosta³y one poddane transformacji normalizacyjnej - unitaryzacja
+
+```{r} 
+unitaryzacja<-function(x){
+  maksi=0
+  minim=0
+  for (j in 2:ncol(x)){
+    maksi[j]=max(x[j])
+    minim[j]=min(x[j])
+    for (i in 1:nrow(x)){
+      x[i,j]=(x[i,j]-minim[j])/(maksi[j]-minim[j])
+    }
+  }
+  return(x)
+}
+
+dane_porzadkowanie<-unitaryzacja(dane_porzadkowanie)
+```
+
+#Nieliniowe porz¹dkowanie przy pomocy metod aglomeracyjnych
+
+Chc¹c zastosowaæ funkcjê agnes, nale¿y w pierwszej kolejnoœci wyznaczyæ macierz odleg³oœci pomiêdzy wszystkimi parami obiektów. Do wyznaczenia odleg³oœci zostanie u¿yta metryka euklidesowa -  w tym celu zostanie wykorzystania funkcja dist(x, method="") - w miejsce x nale¿y wpisaæ nazwê tabeli zawieraj¹cych dane do uporz¹dkowania, a w nawiasie[,] na miejscu drugiej wspó³rzêdnej nale¿y podaæ wektor kolumn, na podstawie którego wartoœci zostanie wyznaczona macierz odleg³oœci. W miejsce argumentu method nale¿y wpisaæ nazwê metryki na podstawie której zostana obliczona odleg³oœæ - w naszym przypadku bêdzie to euclidean - euklidesowa. 
+
+
+```{r}
+
+odleglosci <- dist(dane_porzadkowanie[,c("CENA.BRUTTO_[pln]","MOC_[km]",
+            "POJEMNOSC.SKOKOWA_[cm3]","ROK.PRODUKCJI","PRZEBIEG_[km]")],                                           method = "euclidean")
+
+```
+
+Nastêpnie nale¿y zaimportowaæ bibliotekê cluster, by móc skorzystaæ z metod aglomerycyjnych. Jak ju¿ zosta³o wspomnanie we wstêpnie, wywo³anie metod aglomeracyjnych odbywa siê dziêki funkcji agnes(x, method="") . W miejsce argumentu x - zostanie podana wyznaczona macierz odleg³oœci z kolei, w kolejnym argumencie - method zostanie podana regu³a wyznaczania odleg³oœci pomiêdzy now¹ grup¹ a pozosta³ymi obiektów. Regu³¹ t¹ mo¿e byæ metoda najbli¿szego s¹siedztwa, najdalszego, Warda lub œredniej miêdzy grupowej. My wykorzytsamy metodê najbli¿szego s¹siedztwa oraz najdalszego. 
+
+
+```{r}
+library(cluster)
+metoda_najblizszego <- agnes(odleglosci, method = "single")
+metoda_najdalszego<- agnes(odleglosci, method = "complete")
+
+```
+
+Ostatni etap to graficzne zaprezentowanie wyniku w postaci dendrogramu. W tym celu nale¿y zaimportowaæ bibliotekê factoextra, w której to jest funkcja fviz_dend(x, main = ""). W miejsce argumentu x nale¿y wpisaæ nazwê obiektu powsta³ego przy pomocy funkcji agnes, main to tytu³ wykresu. 
+Dodatkowo na osi pionowej zaprezentowane s¹ odleg³oœci miêdzy obiektami, z kolei na osi poziomej znajduj¹ siê numery indeksów obiektów.
+
+
+Dendrogram dla metody najbli¿szego s¹siada:
+
+```{r}
+library(factoextra)
+fviz_dend(metoda_najblizszego, main = "Metoda najbli¿szego s¹siedztwa")
+
+```
+
+Dendrogram dla metody najdalszego s¹siada:
+
+```{r}
+
+fviz_dend(metoda_najdalszego, main = "Metoda najdalszego s¹siedztwa")
+```
+
+##Porównanie wyników uporz¹dkowania
+
+Dla tak ma³ego zbioru, dla którego nie wszystkie obiekty znacz¹co ró¿ni¹ siê miêdzy sob¹, nie s¹ zbytnio widoczne ró¿nice uporz¹dkowania nieliniowego. Aczkolwiek w przypadku dendrogramu uzyskanego metod¹ najdalszego s¹siedztwa mo¿na zauwa¿yæ wiêksz¹ odleg³oœæ wi¹zañ ni¿ dla metody najbli¿szego s¹siedztwa, które to obrazuj¹ odleg³oœæ miêdzy grupami. Dodatkowo obiekty charakteryzuj¹ce siê najbardziej korzystnym wartoœci zmiennych, zosta³y pogrupowane w jedn¹ grupê (tu mowa o obiektach o numerach indeksów 2, 3, 4), natomiast w przypadku metody najbli¿szego s¹siedztwa obiekty te zosta³y rozdzielone w osobne grupy.
+
+
+

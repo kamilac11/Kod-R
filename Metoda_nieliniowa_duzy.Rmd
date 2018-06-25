@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 #Wstêp
 
-Zostanie tutaj zaprezentowane zastosowanie nieliniowego porz¹dkowania danych przy pomocy istniej¹cych funkcji biblioteki cluster, w której to funkcja agnes umo¿liwiaj¹ca uporz¹dkowanie zbioru po wyborze odpowiedniej metody aglomeracyjnej. Mamy tu do wyboru metody: single - metoda najbli¿szego s¹siedztwa, complete - metoda najdalszego s¹siedztwa, ward - metoda Warda, average - metoda œredniej miêdzy grupowej. W poni¿ej zostanie zaprezentowane zastosowanie metod single oraz complete wraz z porównaniem wyników porz¹dkowania.
+Zostanie tutaj zaprezentowane zastosowanie nieliniowego porz¹dkowania danych przy pomocy istniej¹cych funkcji biblioteki cluster, w której to funkcja agnes umo¿liwiaj¹ca uporz¹dkowanie zbioru po wyborze odpowiedniej metody aglomeracyjnej. Mamy tu do wyboru metody: single - metoda najbli¿szego s¹siedztwa, complete - metoda najdalszego s¹siedztwa, ward - metoda Warda, average - metoda œredniej miêdzy grupowej. Poni¿ej zostanie zaprezentowane zastosowanie metod single oraz complete wraz z porównaniem wyników porz¹dkowania. 
 
 ##Import danych
 Na pocz¹tku nale¿y zaimportowaæ dane, które chcemy poddaæ porz¹dkowaniu. W tym celu nale¿y zaimportowaæ bibloteke readxl - gdy¿ dane pobieramy z excela, a w kolejnym kroku wywo³ujemy plik, podaj¹c nasz¹ œcie¿kê pliku z rozszerzeniem xlsx. My u¿yjemy tutaj zbioru zawieraj¹cego 8 obiektów, bêd¹cych ofertami sprzeda¿y aut. 

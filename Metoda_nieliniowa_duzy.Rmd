@@ -108,7 +108,7 @@ Dendrogram dla metody najbli¿szego s¹siada:
 
 ```{r}
 library(factoextra)
-fviz_dend(metoda_najblizszego, main = "Metoda najbli¿szego s¹siedztwa")
+fviz_dend(metoda_najblizszego, lwd=0.1, cex=0.45, main = "Metoda najbli¿szego s¹siedztwa")
 
 ```
 
@@ -116,12 +116,12 @@ Dendrogram dla metody najdalszego s¹siada:
 
 ```{r}
 
-fviz_dend(metoda_najdalszego, main = "Metoda najdalszego s¹siedztwa")
+fviz_dend(metoda_najdalszego, lwd=0.1, cex=0.45, main = "Metoda najdalszego s¹siedztwa")
 ```
 
 ##Porównanie wyników uporz¹dkowania
-PRZEROBIC
-Dla tak ma³ego zbioru, dla którego nie wszystkie obiekty znacz¹co ró¿ni¹ siê miêdzy sob¹, nie s¹ zbytnio widoczne ró¿nice uporz¹dkowania nieliniowego. Aczkolwiek w przypadku dendrogramu uzyskanego metod¹ najdalszego s¹siedztwa mo¿na zauwa¿yæ wiêksz¹ odleg³oœæ wi¹zañ ni¿ dla metody najbli¿szego s¹siedztwa, które to obrazuj¹ odleg³oœæ miêdzy grupami. Dodatkowo obiekty charakteryzuj¹ce siê najbardziej korzystnym wartoœci zmiennych, zosta³y pogrupowane w jedn¹ grupê (tu mowa o obiektach o numerach indeksów 2, 3, 4), natomiast w przypadku metody najbli¿szego s¹siedztwa obiekty te zosta³y rozdzielone w osobne grupy.
+
+W przypadku dendrogramu uzyskanego metod¹ najdalszego s¹siedztwa mo¿na zauwa¿yæ wiêksz¹ odleg³oœæ wi¹zañ ni¿ dla metody najbli¿szego s¹siedztwa, które to obrazuj¹ odleg³oœæ miêdzy grupami. Dodatkowo obiekty charakteryzuj¹ce siê najbardziej korzystnym wartoœci zmiennych, zosta³y pogrupowane w jedn¹ grupê (tu mowa o obiektach o numerach indeksów 49, 50, 53, 57, 58), natomiast w przypadku metody najbli¿szego s¹siedztwa obiekty te zosta³y rozdzielone w pojedyncze grupy. Mo¿na równie¿ zauwa¿yæ, ¿e w przypadku uporz¹dkowania metod¹ najdalszego s¹siedztwa obiekty tworz¹ pewnego rodzaju pogrupy, skupiska, z kolei w przypadku uporz¹dkowania metod¹ najbli¿szego s¹siada, wynik porz¹dkowania mo¿na porównaæ do wygl¹du lawiny, lub góry, u której podnó¿a znajduj¹ siê obiekty o najni¿szych wartoœciach opisywanych je zmiennych, które to ³¹cz¹ siê i dochodz¹ do szczytu, który stanowi¹ obiekty, o najwy¿szych wartoœciach opisywanych je zmiennych.   
 
 
 
